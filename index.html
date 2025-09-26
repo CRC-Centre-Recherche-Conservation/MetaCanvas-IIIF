@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MetaCanvas IIIF</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .glass-morphism {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .hover-scale {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .hover-scale:hover {
+            transform: scale(1.02);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .loading-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+        
+        .modal-backdrop {
+            backdrop-filter: blur(8px);
+            background-color: rgba(0, 0, 0, 0.75);
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .glow-effect {
+            box-shadow: 0 0 30px rgba(102, 126, 234, 0.3);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .slide-in {
+            animation: slideIn 0.5s ease-out forwards;
+        }
+
+        .tooltip {
+            position: absolute;
+            z-index: 1000;
+            background-color: rgba(31, 41, 55, 0.95);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            max-width: 400px;
+            word-break: break-all;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .tooltip.show {
+            opacity: 1;
+        }
+
+        .copy-btn {
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        td:hover .copy-btn {
+            opacity: 1;
+        }
+
+        .copy-success {
+            animation: copyPulse 0.5s ease;
+        }
+
+        @keyframes copyPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); color: #10b981; }
+            100% { transform: scale(1); }
+        }
+
+        .canvas-thumb {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .canvas-thumb:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .pagination-btn {
+            transition: all 0.2s;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            background-color: rgba(102, 126, 234, 0.2);
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 min-h-screen text-white">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- Header -->
+        <header class="text-center mb-10 slide-in">
+            <h1 class="text-5xl font-bold mb-4">
+                <span class="gradient-text">MetaCanvas IIIF</span>
+            </h1>
+            <p class="text-gray-300 text-lg">Explorez et analysez les canvas de vos manifestes IIIF</p>
+        </header>
+
+        <!-- Input Section -->
+        <div class="glass-morphism rounded-2xl p-6 mb-8 slide-in" style="animation-delay: 0.1s;">
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">
+                        <i class="fas fa-link mr-2"></i>URL du Manifeste IIIF
+                    </label>
+                    <input 
+                        type="url" 
+                        id="manifestUrl" 
+                        placeholder="https://example.org/manifest.json"
+                        class="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all text-white placeholder-gray-400"
+                    >
+                </div>
+                <div class="flex items-end">
+                    <button 
+                        onclick="loadManifest()" 
+                        class="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all duration-300 hover-scale shadow-lg"
+                    >
+                        <i class="fas fa-download mr-2"></i>Charger
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Exemples de manifestes -->
+            <div class="mt-4">
+                <p class="text-sm text-gray-400 mb-2">Essayez avec ces exemples :</p>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="loadExample('https://iiif.bodleian.ox.ac.uk/iiif/manifest/e32a277e-91e2-4a6d-8ba6-cc4bad230410.json')" class="text-xs px-3 py-1 bg-gray-700/50 rounded-full hover:bg-gray-600/50 transition-colors">
+                        Bodleian Library
+                    </button>
+                    <button onclick="loadExample('https://iiif.lib.harvard.edu/manifests/drs:48309543')" class="text-xs px-3 py-1 bg-gray-700/50 rounded-full hover:bg-gray-600/50 transition-colors">
+                        Harvard Library
+                    </button>
+                    <button onclick="loadExample('https://www.e-codices.unifr.ch/metadata/iiif/csg-0018/manifest.json')" class="text-xs px-3 py-1 bg-gray-700/50 rounded-full hover:bg-gray-600/50 transition-colors">
+                        e-codices
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="hidden">
+            <div class="flex justify-center items-center py-20">
+                <div class="loading-pulse">
+                    <i class="fas fa-spinner fa-spin text-4xl text-purple-500"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="hidden glass-morphism rounded-2xl p-6 mb-8 border-red-500">
+            <div class="flex items-center text-red-400">
+                <i class="fas fa-exclamation-circle text-2xl mr-3"></i>
+                <span id="errorMessage"></span>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="manifestContent" class="hidden">
+            <!-- Manifest Info & Thumbnail -->
+            <div class="glass-morphism rounded-2xl p-6 mb-8 slide-in">
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <h2 class="text-2xl font-bold mb-4" id="manifestTitle"></h2>
+                        <p class="text-gray-300 mb-4" id="manifestDescription"></p>
+                        <div class="space-y-2">
+                            <div class="text-sm">
+                                <span class="text-gray-400">Attribution:</span>
+                                <span id="manifestAttribution" class="ml-2"></span>
+                            </div>
+                            <div class="text-sm">
+                                <span class="text-gray-400">Nombre de canvas:</span>
+                                <span id="canvasCount" class="ml-2 font-semibold text-purple-400"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex justify-center items-center">
+                        <div id="thumbnailContainer" class="cursor-pointer hover-scale">
+                            <img id="manifestThumbnail" class="rounded-lg shadow-2xl max-h-64 object-contain glow-effect" alt="Thumbnail">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="glass-morphism rounded-2xl p-6 mb-8 slide-in" style="animation-delay: 0.2s;">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        placeholder="Rechercher dans les labels des canvas..."
+                        onkeyup="searchCanvas()"
+                        class="w-full pl-12 pr-4 py-3 bg-gray-800/50 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all text-white placeholder-gray-400"
+                    >
+                </div>
+                <div id="searchResults" class="mt-2 text-sm text-gray-400"></div>
+            </div>
+
+            <!-- Canvas Table -->
+            <div class="glass-morphism rounded-2xl p-6 slide-in" style="animation-delay: 0.3s;">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">
+                        <i class="fas fa-images mr-2 text-purple-400"></i>Canvas et Services
+                    </h3>
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-2">
+                            <label class="text-sm text-gray-400">Afficher:</label>
+                            <select id="itemsPerPage" onchange="changeItemsPerPage()" class="bg-gray-800/50 border border-gray-600 rounded px-3 py-1 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                <option value="10">10</option>
+                                <option value="20">20</option>
+                                <option value="50">50</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto scrollbar-thin">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-gray-700">
+                                <th class="text-left py-3 px-4 text-sm font-semibold text-purple-400">Aperçu</th>
+                                <th class="text-left py-3 px-4 text-sm font-semibold text-purple-400">Label</th>
+                                <th class="text-left py-3 px-4 text-sm font-semibold text-purple-400">Canvas ID</th>
+                                <th class="text-left py-3 px-4 text-sm font-semibold text-purple-400">Service ID</th>
+                                <th class="text-left py-3 px-4 text-sm font-semibold text-purple-400">Service @ID</th>
+                            </tr>
+                        </thead>
+                        <tbody id="canvasTableBody" class="divide-y divide-gray-700">
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div id="paginationContainer" class="mt-4 flex justify-between items-center">
+                    <div class="text-sm text-gray-400">
+                        Affichage <span id="showingStart"></span>-<span id="showingEnd"></span> sur <span id="totalItems"></span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="prevBtn" onclick="previousPage()" class="pagination-btn px-3 py-1 bg-gray-700/50 rounded hover:bg-gray-600/50 transition-colors disabled:opacity-30">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <div id="pageNumbers" class="flex gap-1"></div>
+                        <button id="nextBtn" onclick="nextPage()" class="pagination-btn px-3 py-1 bg-gray-700/50 rounded hover:bg-gray-600/50 transition-colors disabled:opacity-30">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Image Modal -->
+        <div id="imageModal" class="fixed inset-0 z-50 hidden">
+            <div class="modal-backdrop fixed inset-0" onclick="closeModal()"></div>
+            <div class="relative flex items-center justify-center min-h-screen p-4">
+                <div class="relative bg-gray-900 rounded-2xl max-w-6xl max-h-[90vh] overflow-hidden glass-morphism">
+                    <button 
+                        onclick="closeModal()" 
+                        class="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center bg-gray-800/80 rounded-full hover:bg-gray-700/80 transition-colors"
+                    >
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <img id="modalImage" class="max-w-full max-h-[85vh] object-contain">
+                    <div class="p-4 border-t border-gray-700">
+                        <p id="modalCaption" class="text-sm text-gray-300"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tooltip -->
+        <div id="tooltip" class="tooltip"></div>
+    </div>
+
+    <script>
+        let currentManifest = null;
+        let allCanvases = [];
+        let filteredCanvases = [];
+        let currentPage = 1;
+        let itemsPerPage = 10;
+        let tooltipTimeout = null;
+
+        function loadExample(url) {
+            document.getElementById('manifestUrl').value = url;
+            loadManifest();
+        }
+
+        async function loadManifest() {
+            const url = document.getElementById('manifestUrl').value.trim();
+            if (!url) {
+                showError('Veuillez entrer une URL de manifeste IIIF valide');
+                return;
+            }
+
+            // Reset states
+            document.getElementById('manifestContent').classList.add('hidden');
+            document.getElementById('errorState').classList.add('hidden');
+            document.getElementById('loadingState').classList.remove('hidden');
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const manifest = await response.json();
+                currentManifest = manifest;
+                
+                displayManifest(manifest);
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('manifestContent').classList.remove('hidden');
+                
+            } catch (error) {
+                console.error('Error loading manifest:', error);
+                showError(`Erreur lors du chargement du manifeste: ${error.message}`);
+                document.getElementById('loadingState').classList.add('hidden');
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorState').classList.remove('hidden');
+            setTimeout(() => {
+                document.getElementById('errorState').classList.add('hidden');
+            }, 5000);
+        }
+
+        function displayManifest(manifest) {
+            // Display manifest info
+            const title = getLocalizedValue(manifest.label) || 'Sans titre';
+            document.getElementById('manifestTitle').textContent = title;
+            
+            const description = getLocalizedValue(manifest.description) || 'Aucune description disponible';
+            document.getElementById('manifestDescription').textContent = description;
+            
+            const attribution = getLocalizedValue(manifest.attribution) || manifest.attribution || 'Non spécifié';
+            document.getElementById('manifestAttribution').textContent = attribution;
+
+            // Display thumbnail
+            const thumbnail = getThumbnail(manifest);
+            if (thumbnail) {
+                document.getElementById('manifestThumbnail').src = thumbnail;
+                document.getElementById('thumbnailContainer').onclick = () => openModal(thumbnail, title);
+            }
+
+            // Process canvases
+            const sequences = manifest.sequences || [];
+            const canvases = sequences[0]?.canvases || [];
+            allCanvases = canvases;
+            filteredCanvases = canvases;
+            
+            document.getElementById('canvasCount').textContent = canvases.length;
+            
+            currentPage = 1;
+            displayCanvases();
+        }
+
+        function getLocalizedValue(value) {
+            if (!value) return null;
+            if (typeof value === 'string') return value;
+            if (Array.isArray(value)) {
+                if (value.length === 0) return null;
+                if (typeof value[0] === 'string') return value[0];
+                if (value[0]['@value']) return value[0]['@value'];
+            }
+            if (value['@value']) return value['@value'];
+            return null;
+        }
+
+        function getThumbnail(manifest) {
+            // Try to get thumbnail from manifest
+            if (manifest.thumbnail) {
+                if (typeof manifest.thumbnail === 'string') return manifest.thumbnail;
+                if (manifest.thumbnail['@id']) return manifest.thumbnail['@id'];
+                if (Array.isArray(manifest.thumbnail) && manifest.thumbnail[0]) {
+                    if (typeof manifest.thumbnail[0] === 'string') return manifest.thumbnail[0];
+                    if (manifest.thumbnail[0]['@id']) return manifest.thumbnail[0]['@id'];
+                }
+            }
+            
+            // Fallback to first canvas image
+            const sequences = manifest.sequences || [];
+            const canvases = sequences[0]?.canvases || [];
+            if (canvases.length > 0) {
+                const firstCanvas = canvases[0];
+                const images = firstCanvas.images || [];
+                if (images.length > 0 && images[0].resource) {
+                    if (images[0].resource['@id']) return images[0].resource['@id'];
+                    if (images[0].resource.service && images[0].resource.service['@id']) {
+                        return `${images[0].resource.service['@id']}/full/400,/0/default.jpg`;
+                    }
+                }
+            }
+            
+            return null;
+        }
+
+        function getCanvasThumbnail(canvas) {
+            // Try canvas thumbnail first
+            if (canvas.thumbnail) {
+                if (typeof canvas.thumbnail === 'string') return canvas.thumbnail;
+                if (canvas.thumbnail['@id']) return canvas.thumbnail['@id'];
+                if (Array.isArray(canvas.thumbnail) && canvas.thumbnail[0]) {
+                    if (typeof canvas.thumbnail[0] === 'string') return canvas.thumbnail[0];
+                    if (canvas.thumbnail[0]['@id']) return canvas.thumbnail[0]['@id'];
+                }
+            }
+            
+            // Try to get from canvas images
+            const images = canvas.images || [];
+            if (images.length > 0 && images[0].resource) {
+                const resource = images[0].resource;
+                if (resource['@id']) {
+                    // If it's already a full URL, return it
+                    if (resource['@id'].includes('/full/')) {
+                        return resource['@id'].replace(/\/full\/.*\//, '/full/100,/');
+                    }
+                    return resource['@id'];
+                }
+                if (resource.service && resource.service['@id']) {
+                    return `${resource.service['@id']}/full/100,/0/default.jpg`;
+                }
+            }
+            
+            return null;
+        }
+
+        function getCanvasFullImage(canvas) {
+            const images = canvas.images || [];
+            if (images.length > 0 && images[0].resource) {
+                const resource = images[0].resource;
+                if (resource['@id']) return resource['@id'];
+                if (resource.service && resource.service['@id']) {
+                    return `${resource.service['@id']}/full/full/0/default.jpg`;
+                }
+            }
+            return null;
+        }
+
+        function displayCanvases() {
+            const tbody = document.getElementById('canvasTableBody');
+            tbody.innerHTML = '';
+
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = Math.min(startIndex + itemsPerPage, filteredCanvases.length);
+            const canvasesToDisplay = filteredCanvases.slice(startIndex, endIndex);
+
+            canvasesToDisplay.forEach((canvas, index) => {
+                const globalIndex = startIndex + index;
+                const label = getLocalizedValue(canvas.label) || `Canvas ${globalIndex + 1}`;
+                const canvasId = canvas['@id'] || '';
+                
+                let serviceId = '';
+                let serviceAtId = '';
+                
+                const images = canvas.images || [];
+                if (images.length > 0 && images[0].resource) {
+                    const resource = images[0].resource;
+                    if (resource.service) {
+                        serviceId = resource.service['@id'] || '';
+                        serviceAtId = resource.service.id || '';
+                    }
+                }
+
+                const thumbnailUrl = getCanvasThumbnail(canvas);
+                const fullImageUrl = getCanvasFullImage(canvas);
+
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-800/30 transition-colors canvas-row';
+                row.innerHTML = `
+                    <td class="py-3 px-4">
+                        ${thumbnailUrl ? 
+                            `<img src="${thumbnailUrl}" class="canvas-thumb" onclick="openModal('${fullImageUrl || thumbnailUrl}', '${escapeHtml(label)}')" alt="${escapeHtml(label)}" onerror="this.style.display='none'">` 
+                            : '<div class="w-[60px] h-[60px] bg-gray-700/50 rounded-lg flex items-center justify-center"><i class="fas fa-image text-gray-500"></i></div>'}
+                    </td>
+                    <td class="py-3 px-4 text-sm">${escapeHtml(label)}</td>
+                    <td class="py-3 px-4 text-sm font-mono text-xs text-gray-400 relative">
+                        <div class="flex items-center gap-2">
+                            <span class="truncate max-w-[200px] cursor-pointer" 
+                                  onmouseenter="showTooltip(event, '${escapeHtml(canvasId)}')"
+                                  onmouseleave="hideTooltip()">
+                                ${escapeHtml(truncateId(canvasId))}
+                            </span>
+                            <button onclick="copyToClipboard('${escapeHtml(canvasId)}', this)" 
+                                    class="copy-btn text-gray-500 hover:text-purple-400 transition-colors">
+                                <i class="fas fa-copy text-xs"></i>
+                            </button>
+                        </div>
+                    </td>
+                    <td class="py-3 px-4 text-sm font-mono text-xs text-gray-400 relative">
+                        <div class="flex items-center gap-2">
+                            <span class="truncate max-w-[200px] cursor-pointer"
+                                  onmouseenter="showTooltip(event, '${escapeHtml(serviceId)}')"
+                                  onmouseleave="hideTooltip()">
+                                ${escapeHtml(truncateId(serviceId))}
+                            </span>
+                            ${serviceId ? `
+                            <button onclick="copyToClipboard('${escapeHtml(serviceId)}', this)"
+                                    class="copy-btn text-gray-500 hover:text-purple-400 transition-colors">
+                                <i class="fas fa-copy text-xs"></i>
+                            </button>` : ''}
+                        </div>
+                    </td>
+                    <td class="py-3 px-4 text-sm font-mono text-xs text-gray-400 relative">
+                        <div class="flex items-center gap-2">
+                            <span class="truncate max-w-[200px] cursor-pointer"
+                                  onmouseenter="showTooltip(event, '${escapeHtml(serviceAtId)}')"
+                                  onmouseleave="hideTooltip()">
+                                ${escapeHtml(truncateId(serviceAtId))}
+                            </span>
+                            ${serviceAtId ? `
+                            <button onclick="copyToClipboard('${escapeHtml(serviceAtId)}', this)"
+                                    class="copy-btn text-gray-500 hover:text-purple-400 transition-colors">
+                                <i class="fas fa-copy text-xs"></i>
+                            </button>` : ''}
+                        </div>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+
+            updatePagination();
+        }
+
+        function truncateId(id) {
+            if (id.length > 30) {
+                return '...' + id.slice(-27);
+            }
+            return id;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showTooltip(event, text) {
+            if (!text) return;
+            
+            clearTimeout(tooltipTimeout);
+            tooltipTimeout = setTimeout(() => {
+                const tooltip = document.getElementById('tooltip');
+                tooltip.textContent = text;
+                tooltip.classList.add('show');
+                
+                const rect = event.target.getBoundingClientRect();
+                tooltip.style.left = rect.left + 'px';
+                tooltip.style.top = (rect.bottom + 5) + 'px';
+                
+                // Adjust if tooltip goes off screen
+                const tooltipRect = tooltip.getBoundingClientRect();
+                if (tooltipRect.right > window.innerWidth) {
+                    tooltip.style.left = (window.innerWidth - tooltipRect.width - 10) + 'px';
+                }
+            }, 1000);
+        }
+
+        function hideTooltip() {
+            clearTimeout(tooltipTimeout);
+            const tooltip = document.getElementById('tooltip');
+            tooltip.classList.remove('show');
+        }
+
+        function copyToClipboard(text, button) {
+            navigator.clipboard.writeText(text).then(() => {
+                const icon = button.querySelector('i');
+                icon.classList.remove('fa-copy');
+                icon.classList.add('fa-check', 'copy-success');
+                
+                setTimeout(() => {
+                    icon.classList.remove('fa-check', 'copy-success');
+                    icon.classList.add('fa-copy');
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+            });
+        }
+
+        function changeItemsPerPage() {
+            itemsPerPage = parseInt(document.getElementById('itemsPerPage').value);
+            currentPage = 1;
+            displayCanvases();
+        }
+
+        function updatePagination() {
+            const totalPages = Math.ceil(filteredCanvases.length / itemsPerPage);
+            const startIndex = (currentPage - 1) * itemsPerPage + 1;
+            const endIndex = Math.min(currentPage * itemsPerPage, filteredCanvases.length);
+
+            document.getElementById('showingStart').textContent = filteredCanvases.length > 0 ? startIndex : 0;
+            document.getElementById('showingEnd').textContent = endIndex;
+            document.getElementById('totalItems').textContent = filteredCanvases.length;
+
+            // Update buttons
+            document.getElementById('prevBtn').disabled = currentPage === 1;
+            document.getElementById('nextBtn').disabled = currentPage === totalPages || totalPages === 0;
+
+            // Update page numbers
+            const pageNumbers = document.getElementById('pageNumbers');
+            pageNumbers.innerHTML = '';
+
+            const maxButtons = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+            if (endPage - startPage < maxButtons - 1) {
+                startPage = Math.max(1, endPage - maxButtons + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                const button = document.createElement('button');
+                button.textContent = i;
+                button.className = `pagination-btn px-3 py-1 rounded transition-colors ${
+                    i === currentPage 
+                        ? 'bg-purple-600 text-white' 
+                        : 'bg-gray-700/50 hover:bg-gray-600/50'
+                }`;
+                button.onclick = () => goToPage(i);
+                pageNumbers.appendChild(button);
+            }
+        }
+
+        function goToPage(page) {
+            currentPage = page;
+            displayCanvases();
+        }
+
+        function previousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                displayCanvases();
+            }
+        }
+
+        function nextPage() {
+            const totalPages = Math.ceil(filteredCanvases.length / itemsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                displayCanvases();
+            }
+        }
+
+        function searchCanvas() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            if (!searchTerm) {
+                filteredCanvases = allCanvases;
+            } else {
+                filteredCanvases = allCanvases.filter(canvas => {
+                    const label = getLocalizedValue(canvas.label) || '';
+                    return label.toLowerCase().includes(searchTerm);
+                });
+            }
+            
+            currentPage = 1;
+            displayCanvases();
+
+            // Update search results message
+            const resultsDiv = document.getElementById('searchResults');
+            if (searchTerm) {
+                resultsDiv.textContent = `${filteredCanvases.length} résultat(s) trouvé(s)`;
+            } else {
+                resultsDiv.textContent = '';
+            }
+        }
+
+        function openModal(imageUrl, caption) {
+            if (!imageUrl) return;
+            document.getElementById('modalImage').src = imageUrl;
+            document.getElementById('modalCaption').textContent = caption;
+            document.getElementById('imageModal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            document.getElementById('imageModal').classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        // Hide tooltip when clicking anywhere
+        document.addEventListener('click', hideTooltip);
+    </script>
+</body>
+</html>
