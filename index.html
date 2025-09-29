@@ -394,21 +394,30 @@
 
         <!-- Image Modal -->
         <div id="imageModal" class="fixed inset-0 z-50 hidden">
-            <div class="modal-backdrop fixed inset-0" onclick="closeModal()"></div>
-            <div class="relative flex items-center justify-center min-h-screen p-4">
-                <div class="relative bg-gray-900 rounded-2xl max-w-6xl max-h-[90vh] overflow-hidden glass-morphism">
-                    <button 
-                        onclick="closeModal()" 
-                        class="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center bg-gray-800/80 rounded-full hover:bg-gray-700/80 transition-colors"
-                    >
-                        <i class="fas fa-times"></i>
-                    </button>
-                    <img id="modalImage" class="max-w-full max-h-[85vh] object-contain">
-                    <div class="p-4 border-t border-gray-700">
-                        <p id="modalCaption" class="text-sm text-gray-300"></p>
-                    </div>
-                </div>
+        <div class="modal-backdrop fixed inset-0" onclick="closeModal()"></div>
+        <div class="relative flex items-center justify-center min-h-screen p-4">
+            <div class="relative bg-gray-900 rounded-2xl max-w-6xl max-h-[90vh] overflow-hidden glass-morphism">
+            <button 
+                onclick="closeModal()" 
+                class="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center bg-gray-800/80 rounded-full hover:bg-gray-700/80 transition-colors"
+            >
+                <i class="fas fa-times"></i>
+            </button>
+
+            <!-- Spinner -->
+            <div id="spinner" class="absolute inset-0 flex items-center justify-center bg-gray-900/50">
+                <svg class="animate-spin h-10 w-10 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25 text-purple-900" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75 text-purple-600" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+        </svg>
             </div>
+
+            <img id="modalImage" class="max-w-full max-h-[85vh] object-contain opacity-0 transition-opacity duration-300">
+            <div class="p-4 border-t border-gray-700">
+                <p id="modalCaption" class="text-sm text-gray-300"></p>
+            </div>
+            </div>
+        </div>
         </div>
 
         <!-- Tooltip -->
@@ -501,14 +510,14 @@
                 const canvasId = canvas['@id'] || '';
                 
                 let serviceId = '';
-                let serviceAtId = '';
+                let ressourceId = '';
                 
                 const images = canvas.images || [];
                 if (images.length > 0 && images[0].resource) {
                     const resource = images[0].resource;
+                    ressourceId = resource['@id']
                     if (resource.service) {
                         serviceId = resource.service['@id'] || '';
-                        serviceAtId = resource.service.id || '';
                     }
                 }
 
@@ -521,7 +530,7 @@
                     label: label,
                     canvasId: canvasId,
                     serviceId: serviceId,
-                    serviceAtId: serviceAtId
+                    ressourceId: ressourceId
                 };
             });
 
@@ -569,7 +578,7 @@
                         }
                     },
                     { 
-                        data: 'serviceAtId',
+                        data: 'ressourceId',
                         render: function(data, type) {
                             if (type !== 'display') {
                                 return data;
@@ -695,8 +704,7 @@
                 if (resource['@id']) {
                     if (resource['@id'].includes('/full/')) {
                         return resource['@id'].replace(/\/full\/.*\//, '/full/100,/');
-                    }
-                    return resource['@id'];
+                    };
                 }
                 if (resource.service && resource.service['@id']) {
                     return `${resource.service['@id']}/full/100,/0/default.jpg`;
@@ -710,9 +718,13 @@
             const images = canvas.images || [];
             if (images.length > 0 && images[0].resource) {
                 const resource = images[0].resource;
-                if (resource['@id']) return resource['@id'];
+                if (resource['@id']) {
+                    if (resource['@id'].includes('/full/')) {
+                        return resource['@id'].replace(/\/full\/.*?\//, '/full/800,/')
+                    };
+                };
                 if (resource.service && resource.service['@id']) {
-                    return `${resource.service['@id']}/full/full/0/default.jpg`;
+                    return `${resource.service['@id']}/full/800,/0/default.jpg`;
                 }
             }
             return null;
@@ -768,10 +780,22 @@
 
         function openModal(imageUrl, caption) {
             if (!imageUrl) return;
-            document.getElementById('modalImage').src = imageUrl;
+
+            const modalImage = document.getElementById('modalImage');
+            const spinner = document.getElementById('spinner');
+
+            modalImage.classList.add('opacity-0');
+            spinner.classList.remove('hidden');
+
+            modalImage.src = imageUrl;
             document.getElementById('modalCaption').textContent = caption;
             document.getElementById('imageModal').classList.remove('hidden');
             document.body.style.overflow = 'hidden';
+
+            modalImage.onload = () => {
+                spinner.classList.add('hidden');
+                modalImage.classList.remove('opacity-0');
+            };
         }
 
         function escapeRegExp(string) {
