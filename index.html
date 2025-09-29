@@ -3,9 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MetaCanvas IIIF</title>
+    <title>IIIF Manifest Parser</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+    
+    <!-- jQuery (required for DataTables) -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         
@@ -48,25 +60,6 @@
             background-color: rgba(0, 0, 0, 0.75);
         }
         
-        .scrollbar-thin::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        
-        .scrollbar-thin::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 3px;
-        }
-        
-        .scrollbar-thin::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 3px;
-        }
-        
-        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
         .glow-effect {
             box-shadow: 0 0 30px rgba(102, 126, 234, 0.3);
         }
@@ -141,17 +134,139 @@
             box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
         }
 
-        .pagination-btn {
+        /* DataTables Dark Theme Customization */
+        .dataTables_wrapper {
+            color: #e5e7eb;
+        }
+
+        .dataTables_length select,
+        .dataTables_filter input {
+            background-color: rgba(55, 65, 81, 0.5);
+            border: 1px solid rgb(75, 85, 99);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-left: 8px;
+        }
+
+        .dataTables_length select:focus,
+        .dataTables_filter input:focus {
+            outline: none;
+            border-color: rgb(147, 51, 234);
+            ring: 2px;
+            ring-color: rgb(147, 51, 234);
+        }
+
+        .dataTables_info {
+            color: #9ca3af;
+        }
+
+        .dataTables_paginate .paginate_button {
+            background: rgba(55, 65, 81, 0.5);
+            color: white !important;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            margin: 0 2px;
+            cursor: pointer;
             transition: all 0.2s;
         }
 
-        .pagination-btn:hover:not(:disabled) {
-            background-color: rgba(102, 126, 234, 0.2);
+        .dataTables_paginate .paginate_button:hover {
+            background: rgba(75, 85, 99, 0.8) !important;
+            color: white !important;
         }
 
-        .pagination-btn:disabled {
+        .dataTables_paginate .paginate_button.current {
+            background: linear-gradient(135deg, #7c3aed, #ec4899) !important;
+            color: white !important;
+            font-weight: 600;
+        }
+
+        .dataTables_paginate .paginate_button.disabled {
             opacity: 0.3;
             cursor: not-allowed;
+        }
+
+        table.dataTable thead th {
+            border-bottom: 1px solid rgb(55, 65, 81);
+            color: #a78bfa;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        table.dataTable tbody tr {
+            border-bottom: 1px solid rgba(55, 65, 81, 0.3);
+        }
+
+        table.dataTable tbody tr:hover {
+            background-color: rgba(55, 65, 81, 0.3);
+        }
+
+        table.dataTable.no-footer {
+            border-bottom: none;
+        }
+
+        .dataTables_empty {
+            color: #9ca3af;
+        }
+
+        /* Sorting icons */
+        table.dataTable thead .sorting,
+        table.dataTable thead .sorting_asc,
+        table.dataTable thead .sorting_desc {
+            position: relative;
+            padding-right: 20px;
+        }
+
+        table.dataTable thead .sorting:after,
+        table.dataTable thead .sorting_asc:after,
+        table.dataTable thead .sorting_desc:after {
+            position: absolute;
+            right: 5px;
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            opacity: 0.5;
+        }
+
+        table.dataTable thead .sorting:after {
+            content: "\f0dc";
+        }
+
+        table.dataTable thead .sorting_asc:after {
+            content: "\f0de";
+            opacity: 1;
+            color: #a78bfa;
+        }
+
+        table.dataTable thead .sorting_desc:after {
+            content: "\f0dd";
+            opacity: 1;
+            color: #a78bfa;
+        }
+
+        /* Search highlight */
+        .highlight {
+            background-color: rgba(147, 51, 234, 0.3);
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        /* Responsive adjustments */
+        .dtr-control {
+            cursor: pointer;
+        }
+
+        .dtr-control:before {
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            content: '\f0fe';
+            color: #a78bfa;
+            margin-right: 8px;
+        }
+
+        .dtr-control.parent:before {
+            content: '\f146';
         }
     </style>
 </head>
@@ -160,9 +275,9 @@
         <!-- Header -->
         <header class="text-center mb-10 slide-in">
             <h1 class="text-5xl font-bold mb-4">
-                <span class="gradient-text">MetaCanvas IIIF</span>
+                <span class="gradient-text">IIIF Manifest Parser</span>
             </h1>
-            <p class="text-gray-300 text-lg">Explorez et analysez les canvas de vos manifestes IIIF</p>
+            <p class="text-gray-300 text-lg">Explorez et analysez vos manifestes IIIF avec élégance</p>
         </header>
 
         <!-- Input Section -->
@@ -250,69 +365,25 @@
                 </div>
             </div>
 
-            <!-- Search Bar -->
-            <div class="glass-morphism rounded-2xl p-6 mb-8 slide-in" style="animation-delay: 0.2s;">
-                <div class="relative">
-                    <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                    <input 
-                        type="text" 
-                        id="searchInput" 
-                        placeholder="Rechercher dans les labels des canvas..."
-                        onkeyup="searchCanvas()"
-                        class="w-full pl-12 pr-4 py-3 bg-gray-800/50 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all text-white placeholder-gray-400"
-                    >
-                </div>
-                <div id="searchResults" class="mt-2 text-sm text-gray-400"></div>
-            </div>
-
             <!-- Canvas Table -->
             <div class="glass-morphism rounded-2xl p-6 slide-in" style="animation-delay: 0.3s;">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-bold">
-                        <i class="fas fa-images mr-2 text-purple-400"></i>Canvas et Services
-                    </h3>
-                    <div class="flex items-center gap-4">
-                        <div class="flex items-center gap-2">
-                            <label class="text-sm text-gray-400">Afficher:</label>
-                            <select id="itemsPerPage" onchange="changeItemsPerPage()" class="bg-gray-800/50 border border-gray-600 rounded px-3 py-1 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                                <option value="10">10</option>
-                                <option value="20">20</option>
-                                <option value="50">50</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="overflow-x-auto scrollbar-thin">
-                    <table class="w-full">
+                <h3 class="text-xl font-bold mb-4">
+                    <i class="fas fa-images mr-2 text-purple-400"></i>Canvas et Services
+                </h3>
+                <div class="overflow-x-auto">
+                    <table id="canvasTable" class="display responsive nowrap w-full">
                         <thead>
-                            <tr class="border-b border-gray-700">
-                                <th class="text-left py-3 px-4 text-sm font-semibold text-purple-400">Aperçu</th>
-                                <th class="text-left py-3 px-4 text-sm font-semibold text-purple-400">Label</th>
-                                <th class="text-left py-3 px-4 text-sm font-semibold text-purple-400">Canvas ID</th>
-                                <th class="text-left py-3 px-4 text-sm font-semibold text-purple-400">Service ID</th>
-                                <th class="text-left py-3 px-4 text-sm font-semibold text-purple-400">Service @ID</th>
+                            <tr>
+                                <th>Aperçu</th>
+                                <th>Label</th>
+                                <th>Canvas ID</th>
+                                <th>Service ID</th>
+                                <th>Service @ID</th>
                             </tr>
                         </thead>
-                        <tbody id="canvasTableBody" class="divide-y divide-gray-700">
+                        <tbody>
                         </tbody>
                     </table>
-                </div>
-
-                <!-- Pagination -->
-                <div id="paginationContainer" class="mt-4 flex justify-between items-center">
-                    <div class="text-sm text-gray-400">
-                        Affichage <span id="showingStart"></span>-<span id="showingEnd"></span> sur <span id="totalItems"></span>
-                    </div>
-                    <div class="flex gap-2">
-                        <button id="prevBtn" onclick="previousPage()" class="pagination-btn px-3 py-1 bg-gray-700/50 rounded hover:bg-gray-600/50 transition-colors disabled:opacity-30">
-                            <i class="fas fa-chevron-left"></i>
-                        </button>
-                        <div id="pageNumbers" class="flex gap-1"></div>
-                        <button id="nextBtn" onclick="nextPage()" class="pagination-btn px-3 py-1 bg-gray-700/50 rounded hover:bg-gray-600/50 transition-colors disabled:opacity-30">
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
-                    </div>
                 </div>
             </div>
         </div>
@@ -342,10 +413,7 @@
 
     <script>
         let currentManifest = null;
-        let allCanvases = [];
-        let filteredCanvases = [];
-        let currentPage = 1;
-        let itemsPerPage = 10;
+        let dataTable = null;
         let tooltipTimeout = null;
 
         function loadExample(url) {
@@ -364,6 +432,12 @@
             document.getElementById('manifestContent').classList.add('hidden');
             document.getElementById('errorState').classList.add('hidden');
             document.getElementById('loadingState').classList.remove('hidden');
+
+            // Destroy existing DataTable if it exists
+            if (dataTable) {
+                dataTable.destroy();
+                dataTable = null;
+            }
 
             try {
                 const response = await fetch(url);
@@ -414,13 +488,150 @@
             // Process canvases
             const sequences = manifest.sequences || [];
             const canvases = sequences[0]?.canvases || [];
-            allCanvases = canvases;
-            filteredCanvases = canvases;
             
             document.getElementById('canvasCount').textContent = canvases.length;
             
-            currentPage = 1;
-            displayCanvases();
+            // Prepare data for DataTable
+            const tableData = canvases.map((canvas, index) => {
+                const label = getLocalizedValue(canvas.label) || `Canvas ${index + 1}`;
+                const canvasId = canvas['@id'] || '';
+                
+                let serviceId = '';
+                let serviceAtId = '';
+                
+                const images = canvas.images || [];
+                if (images.length > 0 && images[0].resource) {
+                    const resource = images[0].resource;
+                    if (resource.service) {
+                        serviceId = resource.service['@id'] || '';
+                        serviceAtId = resource.service.id || '';
+                    }
+                }
+
+                const thumbnailUrl = getCanvasThumbnail(canvas);
+                const fullImageUrl = getCanvasFullImage(canvas);
+
+                return {
+                    thumbnail: thumbnailUrl,
+                    fullImage: fullImageUrl,
+                    label: label,
+                    canvasId: canvasId,
+                    serviceId: serviceId,
+                    serviceAtId: serviceAtId
+                };
+            });
+
+            // Initialize DataTable
+            initializeDataTable(tableData);
+        }
+
+        function initializeDataTable(data) {
+            dataTable = $('#canvasTable').DataTable({
+                data: data,
+                columns: [
+                    {
+                        data: 'thumbnail',
+                        orderable: false,
+                        render: function(data, type, row) {
+                            if (data) {
+                                return `<img src="${data}" class="canvas-thumb" onclick="openModal('${row.fullImage || data}', '${escapeHtml(row.label)}')" alt="${escapeHtml(row.label)}" onerror="this.style.display='none'">`;
+                            }
+                            return '<div class="w-[60px] h-[60px] bg-gray-700/50 rounded-lg flex items-center justify-center"><i class="fas fa-image text-gray-500"></i></div>';
+                        }
+                    },
+                    { 
+                        data: 'label',
+                        render: function(data) {
+                            return `<span class="label-text">${escapeHtml(data)}</span>`;
+                        }
+                    },
+                    { 
+                        data: 'canvasId',
+                        render: function(data, type) {
+                            // Pour le tri et la recherche, retourner uniquement le texte
+                            if (type !== 'display') {
+                                return data;
+                            }
+                            // Pour l'affichage, retourner le HTML complet
+                            return createIdCell(data);
+                        }
+                    },
+                    { 
+                        data: 'serviceId',
+                        render: function(data, type) {
+                            if (type !== 'display') {
+                                return data;
+                            }
+                            return createIdCell(data);
+                        }
+                    },
+                    { 
+                        data: 'serviceAtId',
+                        render: function(data, type) {
+                            if (type !== 'display') {
+                                return data;
+                            }
+                            return createIdCell(data);
+                        }
+                    }
+                ],
+                pageLength: 10,
+                lengthMenu: [[10, 20, 50, 100, -1], [10, 20, 50, 100, "Tout"]],
+                responsive: true,
+                language: {
+                    lengthMenu: "Afficher _MENU_ entrées",
+                    search: "Rechercher:",
+                    info: "Affichage de _START_ à _END_ sur _TOTAL_ entrées",
+                    infoEmpty: "Affichage de 0 à 0 sur 0 entrées",
+                    infoFiltered: "(filtré de _MAX_ entrées au total)",
+                    paginate: {
+                        first: "Premier",
+                        last: "Dernier",
+                        next: "Suivant",
+                        previous: "Précédent"
+                    },
+                    zeroRecords: "Aucune entrée correspondante trouvée",
+                    emptyTable: "Aucune donnée disponible"
+                },
+                dom: '<"flex justify-between items-center mb-4"lf>rtip',
+                drawCallback: function() {
+                    // Réappliquer le highlight après chaque redraw
+                    const searchTerm = $('.dataTables_filter input').val();
+                    if (searchTerm) {
+                        $('#canvasTable tbody .label-text').each(function() {
+                            const $this = $(this);
+                            const text = $this.text();
+                            if (text.toLowerCase().includes(searchTerm.toLowerCase())) {
+                                const regex = new RegExp('(' + escapeRegExp(searchTerm) + ')', 'gi');
+                                const highlighted = text.replace(regex, '<span class="highlight">$1</span>');
+                                $this.html(highlighted);
+                            }
+                        });
+                    }
+                }
+            });
+        }
+
+        function createIdCell(id) {
+            if (!id) return '';
+            
+            const truncated = truncateId(id);
+            const escaped = escapeHtml(id);
+            const escapedTruncated = escapeHtml(truncated);
+            
+            return `
+                <div class="flex items-center gap-2">
+                    <span class="truncate max-w-[200px] cursor-pointer font-mono text-xs text-gray-400" 
+                          onmouseenter="showTooltip(event, '${escaped}')"
+                          onmouseleave="hideTooltip()">
+                        ${escapedTruncated}
+                    </span>
+                    <button onclick="copyToClipboard('${escaped}', this)" 
+                            class="copy-btn text-gray-500 hover:text-purple-400 transition-colors">
+                        <i class="fas fa-copy text-xs"></i>
+                    </button>
+                </div>
+            `;
         }
 
         function getLocalizedValue(value) {
@@ -436,7 +647,6 @@
         }
 
         function getThumbnail(manifest) {
-            // Try to get thumbnail from manifest
             if (manifest.thumbnail) {
                 if (typeof manifest.thumbnail === 'string') return manifest.thumbnail;
                 if (manifest.thumbnail['@id']) return manifest.thumbnail['@id'];
@@ -446,7 +656,6 @@
                 }
             }
             
-            // Fallback to first canvas image
             const sequences = manifest.sequences || [];
             const canvases = sequences[0]?.canvases || [];
             if (canvases.length > 0) {
@@ -464,7 +673,6 @@
         }
 
         function getCanvasThumbnail(canvas) {
-            // Try canvas thumbnail first
             if (canvas.thumbnail) {
                 if (typeof canvas.thumbnail === 'string') return canvas.thumbnail;
                 if (canvas.thumbnail['@id']) return canvas.thumbnail['@id'];
@@ -474,12 +682,10 @@
                 }
             }
             
-            // Try to get from canvas images
             const images = canvas.images || [];
             if (images.length > 0 && images[0].resource) {
                 const resource = images[0].resource;
                 if (resource['@id']) {
-                    // If it's already a full URL, return it
                     if (resource['@id'].includes('/full/')) {
                         return resource['@id'].replace(/\/full\/.*\//, '/full/100,/');
                     }
@@ -505,92 +711,6 @@
             return null;
         }
 
-        function displayCanvases() {
-            const tbody = document.getElementById('canvasTableBody');
-            tbody.innerHTML = '';
-
-            const startIndex = (currentPage - 1) * itemsPerPage;
-            const endIndex = Math.min(startIndex + itemsPerPage, filteredCanvases.length);
-            const canvasesToDisplay = filteredCanvases.slice(startIndex, endIndex);
-
-            canvasesToDisplay.forEach((canvas, index) => {
-                const globalIndex = startIndex + index;
-                const label = getLocalizedValue(canvas.label) || `Canvas ${globalIndex + 1}`;
-                const canvasId = canvas['@id'] || '';
-                
-                let serviceId = '';
-                let serviceAtId = '';
-                
-                const images = canvas.images || [];
-                if (images.length > 0 && images[0].resource) {
-                    const resource = images[0].resource;
-                    if (resource.service) {
-                        serviceId = resource.service['@id'] || '';
-                        serviceAtId = resource.service.id || '';
-                    }
-                }
-
-                const thumbnailUrl = getCanvasThumbnail(canvas);
-                const fullImageUrl = getCanvasFullImage(canvas);
-
-                const row = document.createElement('tr');
-                row.className = 'hover:bg-gray-800/30 transition-colors canvas-row';
-                row.innerHTML = `
-                    <td class="py-3 px-4">
-                        ${thumbnailUrl ? 
-                            `<img src="${thumbnailUrl}" class="canvas-thumb" onclick="openModal('${fullImageUrl || thumbnailUrl}', '${escapeHtml(label)}')" alt="${escapeHtml(label)}" onerror="this.style.display='none'">` 
-                            : '<div class="w-[60px] h-[60px] bg-gray-700/50 rounded-lg flex items-center justify-center"><i class="fas fa-image text-gray-500"></i></div>'}
-                    </td>
-                    <td class="py-3 px-4 text-sm">${escapeHtml(label)}</td>
-                    <td class="py-3 px-4 text-sm font-mono text-xs text-gray-400 relative">
-                        <div class="flex items-center gap-2">
-                            <span class="truncate max-w-[200px] cursor-pointer" 
-                                  onmouseenter="showTooltip(event, '${escapeHtml(canvasId)}')"
-                                  onmouseleave="hideTooltip()">
-                                ${escapeHtml(truncateId(canvasId))}
-                            </span>
-                            <button onclick="copyToClipboard('${escapeHtml(canvasId)}', this)" 
-                                    class="copy-btn text-gray-500 hover:text-purple-400 transition-colors">
-                                <i class="fas fa-copy text-xs"></i>
-                            </button>
-                        </div>
-                    </td>
-                    <td class="py-3 px-4 text-sm font-mono text-xs text-gray-400 relative">
-                        <div class="flex items-center gap-2">
-                            <span class="truncate max-w-[200px] cursor-pointer"
-                                  onmouseenter="showTooltip(event, '${escapeHtml(serviceId)}')"
-                                  onmouseleave="hideTooltip()">
-                                ${escapeHtml(truncateId(serviceId))}
-                            </span>
-                            ${serviceId ? `
-                            <button onclick="copyToClipboard('${escapeHtml(serviceId)}', this)"
-                                    class="copy-btn text-gray-500 hover:text-purple-400 transition-colors">
-                                <i class="fas fa-copy text-xs"></i>
-                            </button>` : ''}
-                        </div>
-                    </td>
-                    <td class="py-3 px-4 text-sm font-mono text-xs text-gray-400 relative">
-                        <div class="flex items-center gap-2">
-                            <span class="truncate max-w-[200px] cursor-pointer"
-                                  onmouseenter="showTooltip(event, '${escapeHtml(serviceAtId)}')"
-                                  onmouseleave="hideTooltip()">
-                                ${escapeHtml(truncateId(serviceAtId))}
-                            </span>
-                            ${serviceAtId ? `
-                            <button onclick="copyToClipboard('${escapeHtml(serviceAtId)}', this)"
-                                    class="copy-btn text-gray-500 hover:text-purple-400 transition-colors">
-                                <i class="fas fa-copy text-xs"></i>
-                            </button>` : ''}
-                        </div>
-                    </td>
-                `;
-                
-                tbody.appendChild(row);
-            });
-
-            updatePagination();
-        }
-
         function truncateId(id) {
             if (id.length > 30) {
                 return '...' + id.slice(-27);
@@ -603,6 +723,17 @@
             div.textContent = text;
             return div.innerHTML;
         }
+
+        function escapeRegExp(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+            }
+
 
         function showTooltip(event, text) {
             if (!text) return;
@@ -617,7 +748,6 @@
                 tooltip.style.left = rect.left + 'px';
                 tooltip.style.top = (rect.bottom + 5) + 'px';
                 
-                // Adjust if tooltip goes off screen
                 const tooltipRect = tooltip.getBoundingClientRect();
                 if (tooltipRect.right > window.innerWidth) {
                     tooltip.style.left = (window.innerWidth - tooltipRect.width - 10) + 'px';
@@ -644,94 +774,6 @@
             }).catch(err => {
                 console.error('Failed to copy:', err);
             });
-        }
-
-        function changeItemsPerPage() {
-            itemsPerPage = parseInt(document.getElementById('itemsPerPage').value);
-            currentPage = 1;
-            displayCanvases();
-        }
-
-        function updatePagination() {
-            const totalPages = Math.ceil(filteredCanvases.length / itemsPerPage);
-            const startIndex = (currentPage - 1) * itemsPerPage + 1;
-            const endIndex = Math.min(currentPage * itemsPerPage, filteredCanvases.length);
-
-            document.getElementById('showingStart').textContent = filteredCanvases.length > 0 ? startIndex : 0;
-            document.getElementById('showingEnd').textContent = endIndex;
-            document.getElementById('totalItems').textContent = filteredCanvases.length;
-
-            // Update buttons
-            document.getElementById('prevBtn').disabled = currentPage === 1;
-            document.getElementById('nextBtn').disabled = currentPage === totalPages || totalPages === 0;
-
-            // Update page numbers
-            const pageNumbers = document.getElementById('pageNumbers');
-            pageNumbers.innerHTML = '';
-
-            const maxButtons = 5;
-            let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
-            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
-
-            if (endPage - startPage < maxButtons - 1) {
-                startPage = Math.max(1, endPage - maxButtons + 1);
-            }
-
-            for (let i = startPage; i <= endPage; i++) {
-                const button = document.createElement('button');
-                button.textContent = i;
-                button.className = `pagination-btn px-3 py-1 rounded transition-colors ${
-                    i === currentPage 
-                        ? 'bg-purple-600 text-white' 
-                        : 'bg-gray-700/50 hover:bg-gray-600/50'
-                }`;
-                button.onclick = () => goToPage(i);
-                pageNumbers.appendChild(button);
-            }
-        }
-
-        function goToPage(page) {
-            currentPage = page;
-            displayCanvases();
-        }
-
-        function previousPage() {
-            if (currentPage > 1) {
-                currentPage--;
-                displayCanvases();
-            }
-        }
-
-        function nextPage() {
-            const totalPages = Math.ceil(filteredCanvases.length / itemsPerPage);
-            if (currentPage < totalPages) {
-                currentPage++;
-                displayCanvases();
-            }
-        }
-
-        function searchCanvas() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            
-            if (!searchTerm) {
-                filteredCanvases = allCanvases;
-            } else {
-                filteredCanvases = allCanvases.filter(canvas => {
-                    const label = getLocalizedValue(canvas.label) || '';
-                    return label.toLowerCase().includes(searchTerm);
-                });
-            }
-            
-            currentPage = 1;
-            displayCanvases();
-
-            // Update search results message
-            const resultsDiv = document.getElementById('searchResults');
-            if (searchTerm) {
-                resultsDiv.textContent = `${filteredCanvases.length} résultat(s) trouvé(s)`;
-            } else {
-                resultsDiv.textContent = '';
-            }
         }
 
         function openModal(imageUrl, caption) {
