@@ -370,15 +370,15 @@
                 <h3 class="text-xl font-bold mb-4">
                     <i class="fas fa-images mr-2 text-purple-400"></i>Canvas et Services
                 </h3>
-                <div class="overflow-x-auto">
-                    <table id="canvasTable" class="display responsive nowrap w-full">
+                <div class="w-full">
+                    <table id="canvasTable" class="display responsive nowrap w-full" style="width:100% !important">
                         <thead>
                             <tr>
-                                <th>Aperçu</th>
-                                <th>Label</th>
-                                <th>Canvas ID</th>
-                                <th>Service ID</th>
-                                <th>Service @ID</th>
+                                <th class="w-20">Aperçu</th>
+                                <th class="min-w-[150px]">Label</th>
+                                <th class="min-w-[250px]">Canvas ID</th>
+                                <th class="min-w-[250px]">Service ID</th>
+                                <th class="min-w-[250px]">Service @ID</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -532,6 +532,7 @@
                     {
                         data: 'thumbnail',
                         orderable: false,
+                        width: '80px',
                         render: function(data, type, row) {
                             if (data) {
                                 return `<img src="${data}" class="canvas-thumb" onclick="openModal('${row.fullImage || data}', '${escapeHtml(row.label)}')" alt="${escapeHtml(row.label)}" onerror="this.style.display='none'">`;
@@ -541,12 +542,14 @@
                     },
                     { 
                         data: 'label',
+                        width: '15%',
                         render: function(data) {
                             return `<span class="label-text">${escapeHtml(data)}</span>`;
                         }
                     },
                     { 
                         data: 'canvasId',
+                        width: '28%',
                         render: function(data, type) {
                             // Pour le tri et la recherche, retourner uniquement le texte
                             if (type !== 'display') {
@@ -558,6 +561,7 @@
                     },
                     { 
                         data: 'serviceId',
+                        width: '28%',
                         render: function(data, type) {
                             if (type !== 'display') {
                                 return data;
@@ -567,6 +571,7 @@
                     },
                     { 
                         data: 'serviceAtId',
+                        width: '28%',
                         render: function(data, type) {
                             if (type !== 'display') {
                                 return data;
@@ -577,7 +582,9 @@
                 ],
                 pageLength: 10,
                 lengthMenu: [[10, 20, 50, 100, -1], [10, 20, 50, 100, "Tout"]],
-                responsive: true,
+                responsive: false,
+                scrollX: true,
+                autoWidth: false,
                 language: {
                     lengthMenu: "Afficher _MENU_ entrées",
                     search: "Rechercher:",
@@ -620,14 +627,16 @@
             const escapedTruncated = escapeHtml(truncated);
             
             return `
-                <div class="flex items-center gap-2">
-                    <span class="truncate max-w-[200px] cursor-pointer font-mono text-xs text-gray-400" 
+                <div class="flex items-center gap-2 w-full">
+                    <span class="block truncate cursor-pointer font-mono text-xs text-gray-400" 
+                          style="max-width: calc(100% - 30px);"
                           onmouseenter="showTooltip(event, '${escaped}')"
-                          onmouseleave="hideTooltip()">
+                          onmouseleave="hideTooltip()"
+                          title="${escaped}">
                         ${escapedTruncated}
                     </span>
                     <button onclick="copyToClipboard('${escaped}', this)" 
-                            class="copy-btn text-gray-500 hover:text-purple-400 transition-colors">
+                            class="copy-btn text-gray-500 hover:text-purple-400 transition-colors flex-shrink-0">
                         <i class="fas fa-copy text-xs"></i>
                     </button>
                 </div>
@@ -712,8 +721,8 @@
         }
 
         function truncateId(id) {
-            if (id.length > 30) {
-                return '...' + id.slice(-27);
+            if (id.length > 50) {
+                return '...' + id.slice(-47);
             }
             return id;
         }
@@ -726,14 +735,18 @@
 
         function escapeRegExp(string) {
             return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            }
+        }
 
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
-            }
+        }
 
+        function closeModal() {
+            document.getElementById('imageModal').classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
 
         function showTooltip(event, text) {
             if (!text) return;
@@ -782,11 +795,6 @@
             document.getElementById('modalCaption').textContent = caption;
             document.getElementById('imageModal').classList.remove('hidden');
             document.body.style.overflow = 'hidden';
-        }
-
-        function closeModal() {
-            document.getElementById('imageModal').classList.add('hidden');
-            document.body.style.overflow = 'auto';
         }
 
         // Close modal on Escape key
