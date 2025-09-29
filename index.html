@@ -376,15 +376,41 @@
                 <h3 class="text-xl font-bold mb-4">
                     <i class="fas fa-images mr-2 text-purple-400"></i>Canvas et Services
                 </h3>
-                <div class="overflow-x-auto scrollbar-thin">
-                    <div class="mb-4 flex justify-between items-center"></div>
-                        <button 
-                            id="downloadBtn" 
-                            onclick="downloadSelectedUrls()" 
-                            class="px-6 py-2 mb-3 bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg font-semibold hover:from-green-700 hover:to-emerald-700 transition-all duration-300 hover-scale shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled>
-                            <i class="fas fa-download mr-2"></i>Télécharger les URLs sélectionnées (<span id="selectedCount">0</span>)
-                        </button>
+                <div class="mb-4 flex justify-between items-center">
+                        <div class="relative inline-block">
+                            <div class="flex">
+                                <button 
+                                    id="downloadBtn" 
+                                    onclick="downloadSelectedUrls()" 
+                                    class="px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 rounded-l-lg font-semibold hover:from-green-700 hover:to-emerald-700 transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                    disabled>
+                                    <i class="fas fa-download mr-2"></i>Télécharger les URLs sélectionnées (<span id="selectedCount">0</span>)
+                                </button>
+                                <button 
+                                    id="configBtn" 
+                                    onclick="toggleConfigDropdown(event)"
+                                    class="px-3 py-2 bg-gradient-to-r from-green-600 to-emerald-600 rounded-r-lg border-l border-green-700 hover:from-green-700 hover:to-emerald-700 transition-all duration-300 shadow-lg">
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Dropdown Configuration -->
+                            <div id="configDropdown" class="hidden absolute top-full mt-2 left-0 bg-gray-800 rounded-lg p-5 shadow-2xl z-10 min-w-[280px] border border-gray-700">
+                                <h4 class="text-sm font-semibold text-gray-200 mb-4 text-center">API Image Configuration</h4>
+                                <div class="flex items-center justify-center gap-4">
+                                    <span class="text-sm font-medium text-gray-300" id="v2Label">2.0</span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="apiVersionToggle" class="sr-only peer" onchange="updateApiVersion()">
+                                        <div class="w-14 h-7 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-600"></div>
+                                    </label>
+                                    <span class="text-sm font-medium text-gray-500" id="v3Label">3.0</span>
+                                </div>
+                                <div class="mt-3 pt-3 border-t border-gray-700">
+                                    <p class="text-xs text-gray-400 text-center font-mono" id="apiVersionFormat">/full/full/0/default.jpg</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                         <table id="canvasTable" class="display nowrap w-full" style="width:100% !important">
                             <thead>
                                 <tr>
@@ -440,11 +466,59 @@
         let currentManifest = null;
         let dataTable = null;
         let tooltipTimeout = null;
+        let useApiV3 = false;
+
 
         function loadExample(url) {
             document.getElementById('manifestUrl').value = url;
             loadManifest();
         }
+
+        function getAPIVersion(manifest) {
+            const context = manifest['@context'];
+            if (!context) return 2;
+            
+            const contextStr = Array.isArray(context) ? context[context.length - 1] : context;
+            if (contextStr.includes('/3/context.json')) return 3;
+            if (contextStr.includes('/2/context.json')) return 2;
+            return 2; // Default to v2
+        }
+
+        function updateApiVersion() {
+            useApiV3 = document.getElementById('apiVersionToggle').checked;
+            const v2Label = document.getElementById('v2Label');
+            const v3Label = document.getElementById('v3Label');
+            const formatLabel = document.getElementById('apiVersionFormat');
+            
+            if (useApiV3) {
+                v2Label.classList.remove('text-gray-300');
+                v2Label.classList.add('text-gray-500');
+                v3Label.classList.remove('text-gray-500');
+                v3Label.classList.add('text-gray-300');
+                formatLabel.textContent = '/full/max/0/default.jpg';
+            } else {
+                v2Label.classList.remove('text-gray-500');
+                v2Label.classList.add('text-gray-300');
+                v3Label.classList.remove('text-gray-300');
+                v3Label.classList.add('text-gray-500');
+                formatLabel.textContent = '/full/full/0/default.jpg';
+            }
+        }
+
+        function toggleConfigDropdown(event) {
+            event.stopPropagation();
+            const dropdown = document.getElementById('configDropdown');
+            dropdown.classList.toggle('hidden');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('configDropdown');
+            const configBtn = document.getElementById('configBtn');
+            if (dropdown && !dropdown.contains(e.target) && e.target !== configBtn && !configBtn.contains(e.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
 
         async function loadManifest() {
             const url = document.getElementById('manifestUrl').value.trim();
@@ -493,48 +567,79 @@
         }
 
         function displayManifest(manifest) {
+            const apiVersion = getAPIVersion(manifest);
+    
             // Display manifest info
             const title = getLocalizedValue(manifest.label) || 'Sans titre';
             document.getElementById('manifestTitle').textContent = title;
             
-            const description = getLocalizedValue(manifest.description) || 'Aucune description disponible';
+            const description = getLocalizedValue(manifest.description) || getLocalizedValue(manifest.summary) || 'Aucune description disponible';
             document.getElementById('manifestDescription').textContent = description;
             
-            const attribution = getLocalizedValue(manifest.attribution) || manifest.attribution || 'Non spécifié';
+            const attribution = getLocalizedValue(manifest.attribution) || getLocalizedValue(manifest.requiredStatement?.value) || 'Non spécifié';
             document.getElementById('manifestAttribution').textContent = attribution;
 
             // Display thumbnail
-            const thumbnail = getThumbnail(manifest);
+            const thumbnail = getThumbnail(manifest, apiVersion);
             if (thumbnail) {
                 document.getElementById('manifestThumbnail').src = thumbnail;
                 document.getElementById('thumbnailContainer').onclick = () => openModal(thumbnail, title);
             }
 
-            // Process canvases
-            const sequences = manifest.sequences || [];
-            const canvases = sequences[0]?.canvases || [];
+            // Process canvases based on API version
+            let canvases = [];
+            if (apiVersion === 3) {
+                canvases = manifest.items || [];
+            } else {
+                const sequences = manifest.sequences || [];
+                canvases = sequences[0]?.canvases || [];
+            }
+            
+            document.getElementById('canvasCount').textContent = canvases.length;
             
             document.getElementById('canvasCount').textContent = canvases.length;
             
             // Prepare data for DataTable
             const tableData = canvases.map((canvas, index) => {
                 const label = getLocalizedValue(canvas.label) || `Canvas ${index + 1}`;
-                const canvasId = canvas['@id'] || '';
+                const canvasId = canvas['@id'] || canvas.id || '';
                 
                 let serviceId = '';
                 let ressourceId = '';
                 
-                const images = canvas.images || [];
-                if (images.length > 0 && images[0].resource) {
-                    const resource = images[0].resource;
-                    ressourceId = resource['@id']
-                    if (resource.service) {
-                        serviceId = resource.service['@id'] || '';
+                if (apiVersion === 3) {
+                    // API 3.0 structure
+                    const items = canvas.items || [];
+                    if (items.length > 0) {
+                        const annotationPage = items[0];
+                        const annotations = annotationPage.items || [];
+                        if (annotations.length > 0) {
+                            const annotation = annotations[0];
+                            const body = annotation.body;
+                            if (body) {
+                                ressourceId = body.id || '';
+                                if (body.service && body.service.length > 0) {
+                                    serviceId = body.service[0].id || body.service[0]['@id'] || '';
+                                } else if (body.service) {
+                                    serviceId = body.service.id || body.service['@id'] || '';
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // API 2.0 structure
+                    const images = canvas.images || [];
+                    if (images.length > 0 && images[0].resource) {
+                        const resource = images[0].resource;
+                        ressourceId = resource['@id'];
+                        if (resource.service) {
+                            serviceId = resource.service['@id'] || '';
+                        }
                     }
                 }
 
-                const thumbnailUrl = getCanvasThumbnail(canvas);
-                const fullImageUrl = getCanvasFullImage(canvas);
+                const thumbnailUrl = getCanvasThumbnail(canvas, apiVersion);
+                const fullImageUrl = getCanvasFullImage(canvas, apiVersion);
 
                 return {
                     thumbnail: thumbnailUrl,
@@ -699,7 +804,11 @@
                 if (checkbox.is(':checked')) {
                     const rowData = this.data();
                     if (rowData.serviceId) {
-                        selectedRows.push(rowData.serviceId + '/full/full/0/default.jpg');
+                        if (useApiV3) {
+                            selectedRows.push(rowData.serviceId + '/full/max/0/default.jpg');
+                        } else {
+                            selectedRows.push(rowData.serviceId + '/full/full/0/default.jpg');
+                        }
                     }
                 }
             });
@@ -760,34 +869,87 @@
         function getLocalizedValue(value) {
             if (!value) return null;
             if (typeof value === 'string') return value;
+            
+            // API 3.0 format: { "en": ["text"], "fr": ["texte"] }
+            if (typeof value === 'object' && !Array.isArray(value)) {
+                // Try to find the best language match
+                const languages = ['fr', 'en', 'none', '@none'];
+                for (const lang of languages) {
+                    if (value[lang]) {
+                        const val = value[lang];
+                        if (Array.isArray(val) && val.length > 0) {
+                            return val[0];
+                        }
+                        if (typeof val === 'string') return val;
+                    }
+                }
+                // If no preferred language found, return first available
+                const firstKey = Object.keys(value)[0];
+                if (firstKey) {
+                    const val = value[firstKey];
+                    if (Array.isArray(val) && val.length > 0) return val[0];
+                    if (typeof val === 'string') return val;
+                }
+            }
+            
+            // API 2.0 format: array of objects with @value
             if (Array.isArray(value)) {
                 if (value.length === 0) return null;
                 if (typeof value[0] === 'string') return value[0];
                 if (value[0]['@value']) return value[0]['@value'];
             }
+            
             if (value['@value']) return value['@value'];
             return null;
         }
 
-        function getThumbnail(manifest) {
+        function getThumbnail(manifest, apiVersion) {
             if (manifest.thumbnail) {
                 if (typeof manifest.thumbnail === 'string') return manifest.thumbnail;
                 if (manifest.thumbnail['@id']) return manifest.thumbnail['@id'];
+                if (manifest.thumbnail.id) return manifest.thumbnail.id;
                 if (Array.isArray(manifest.thumbnail) && manifest.thumbnail[0]) {
                     if (typeof manifest.thumbnail[0] === 'string') return manifest.thumbnail[0];
                     if (manifest.thumbnail[0]['@id']) return manifest.thumbnail[0]['@id'];
+                    if (manifest.thumbnail[0].id) return manifest.thumbnail[0].id;
                 }
             }
             
-            const sequences = manifest.sequences || [];
-            const canvases = sequences[0]?.canvases || [];
-            if (canvases.length > 0) {
-                const firstCanvas = canvases[0];
-                const images = firstCanvas.images || [];
-                if (images.length > 0 && images[0].resource) {
-                    if (images[0].resource['@id']) return images[0].resource['@id'];
-                    if (images[0].resource.service && images[0].resource.service['@id']) {
-                        return `${images[0].resource.service['@id']}/full/400,/0/default.jpg`;
+            if (apiVersion === 3) {
+                const canvases = manifest.items || [];
+                if (canvases.length > 0) {
+                    const firstCanvas = canvases[0];
+                    const items = firstCanvas.items || [];
+                    if (items.length > 0) {
+                        const annotationPage = items[0];
+                        const annotations = annotationPage.items || [];
+                        if (annotations.length > 0) {
+                            const annotation = annotations[0];
+                            const body = annotation.body;
+                            if (body) {
+                                if (body.id) return body.id;
+                                if (body.service && body.service.length > 0) {
+                                    const serviceId = body.service[0].id || body.service[0]['@id'];
+                                    if (serviceId) return `${serviceId}/full/400,/0/default.jpg`;
+                                } else if (body.service) {
+                                    const serviceId = body.service.id || body.service['@id'];
+                                    if (serviceId) return `${serviceId}/full/400,/0/default.jpg`;
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                const sequences = manifest.sequences || [];
+                const canvases = sequences[0]?.canvases || [];
+                if (canvases.length > 0) {
+                    const firstCanvas = canvases[0];
+                    const images = firstCanvas.images || [];
+                    if (images.length > 0 && images[0].resource) {
+                        if (images[0].resource['@id']) return images[0].resource['@id'];
+                        if (images[0].resource.service && images[0].resource.service['@id']) {
+                            return `${images[0].resource.service['@id']}/full/400,/0/default.jpg`;
+                        }
                     }
                 }
             }
@@ -795,48 +957,101 @@
             return null;
         }
 
-        function getCanvasThumbnail(canvas) {
+        function getCanvasThumbnail(canvas, apiVersion) {
             if (canvas.thumbnail) {
                 if (typeof canvas.thumbnail === 'string') return canvas.thumbnail;
                 if (canvas.thumbnail['@id']) return canvas.thumbnail['@id'];
+                if (canvas.thumbnail.id) return canvas.thumbnail.id;
                 if (Array.isArray(canvas.thumbnail) && canvas.thumbnail[0]) {
                     if (typeof canvas.thumbnail[0] === 'string') return canvas.thumbnail[0];
                     if (canvas.thumbnail[0]['@id']) return canvas.thumbnail[0]['@id'];
+                    if (canvas.thumbnail[0].id) return canvas.thumbnail[0].id;
                 }
             }
             
-            const images = canvas.images || [];
-            if (images.length > 0 && images[0].resource) {
-                const resource = images[0].resource;
-                if (resource['@id']) {
-                    if (resource['@id'].includes('/full/')) {
-                        return resource['@id'].replace(/\/full\/.*?\//, '/full/100,/')
-                    };
+            if (apiVersion === 3) {
+                const items = canvas.items || [];
+                if (items.length > 0) {
+                    const annotationPage = items[0];
+                    const annotations = annotationPage.items || [];
+                    if (annotations.length > 0) {
+                        const annotation = annotations[0];
+                        const body = annotation.body;
+                        if (body) {
+                            if (body.id) {
+                                if (body.id.includes('/full/')) {
+                                    return body.id.replace(/\/full\/.*?\//, '/full/100,/');
+                                }
+                            }
+                            if (body.service && body.service.length > 0) {
+                                const serviceId = body.service[0].id || body.service[0]['@id'];
+                                if (serviceId) return `${serviceId}/full/100,/0/default.jpg`;
+                            } else if (body.service) {
+                                const serviceId = body.service.id || body.service['@id'];
+                                if (serviceId) return `${serviceId}/full/100,/0/default.jpg`;
+                            }
+                        }
+                    }
                 }
-                if (resource.service && resource.service['@id']) {
-                    return `${resource.service['@id']}/full/100,/0/default.jpg`;
+            } else {
+                const images = canvas.images || [];
+                if (images.length > 0 && images[0].resource) {
+                    const resource = images[0].resource;
+                    if (resource['@id']) {
+                        if (resource['@id'].includes('/full/')) {
+                            return resource['@id'].replace(/\/full\/.*?\//, '/full/100,/')
+                        };
+                    }
+                    if (resource.service && resource.service['@id']) {
+                        return `${resource.service['@id']}/full/100,/0/default.jpg`;
+                    }
                 }
             }
             
             return null;
         }
 
-        function getCanvasFullImage(canvas) {
-            const images = canvas.images || [];
-            if (images.length > 0 && images[0].resource) {
-                const resource = images[0].resource;
-                if (resource['@id']) {
-                    if (resource['@id'].includes('/full/')) {
-                        return resource['@id'].replace(/\/full\/.*?\//, '/full/800,/')
+        function getCanvasFullImage(canvas, apiVersion) {
+            if (apiVersion === 3) {
+                const items = canvas.items || [];
+                if (items.length > 0) {
+                    const annotationPage = items[0];
+                    const annotations = annotationPage.items || [];
+                    if (annotations.length > 0) {
+                        const annotation = annotations[0];
+                        const body = annotation.body;
+                        if (body) {
+                            if (body.id) {
+                                if (body.id.includes('/full/')) {
+                                    return body.id.replace(/\/full\/.*?\//, '/full/800,/');
+                                }
+                            }
+                            if (body.service && body.service.length > 0) {
+                                const serviceId = body.service[0].id || body.service[0]['@id'];
+                                if (serviceId) return `${serviceId}/full/800,/0/default.jpg`;
+                            } else if (body.service) {
+                                const serviceId = body.service.id || body.service['@id'];
+                                if (serviceId) return `${serviceId}/full/800,/0/default.jpg`;
+                            }
+                        }
+                    }
+                }
+            } else {
+                const images = canvas.images || [];
+                if (images.length > 0 && images[0].resource) {
+                    const resource = images[0].resource;
+                    if (resource['@id']) {
+                        if (resource['@id'].includes('/full/')) {
+                            return resource['@id'].replace(/\/full\/.*?\//, '/full/800,/')
+                        };
                     };
-                };
-                if (resource.service && resource.service['@id']) {
-                    return `${resource.service['@id']}/full/800,/0/default.jpg`;
+                    if (resource.service && resource.service['@id']) {
+                        return `${resource.service['@id']}/full/800,/0/default.jpg`;
+                    }
                 }
             }
             return null;
         }
-
         function truncateId(id) {
             if (id.length > 50) {
                 return '...' + id.slice(-47);
