@@ -799,7 +799,7 @@
                 const resource = images[0].resource;
                 if (resource['@id']) {
                     if (resource['@id'].includes('/full/')) {
-                        return resource['@id'].replace(/\/full\/.*\//, '/full/100,/');
+                        return resource['@id'].replace(/\/full\/.*?\//, '/full/100,/')
                     };
                 }
                 if (resource.service && resource.service['@id']) {
