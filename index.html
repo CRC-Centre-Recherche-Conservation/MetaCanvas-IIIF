@@ -706,6 +706,15 @@
                 showError('Aucune ligne avec Service ID sélectionnée');
                 return;
             }
+
+            let manifestTitle = document.getElementById('manifestTitle').textContent || 'manifest';
+            let slug = manifestTitle
+                .toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '')
+                .substring(0, 40);
+            const filename = `IIIF_urls_${slug}.txt`;
             
             // Create text file
             const textContent = selectedRows.join('\n');
@@ -715,7 +724,7 @@
             // Create download link
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'iiif_urls.txt';
+            a.download = filename;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
