@@ -501,14 +501,14 @@
                 const canvasId = canvas['@id'] || '';
                 
                 let serviceId = '';
-                let serviceAtId = '';
+                let ressourceId = '';
                 
                 const images = canvas.images || [];
                 if (images.length > 0 && images[0].resource) {
                     const resource = images[0].resource;
+                    ressourceId = resource['@id']
                     if (resource.service) {
                         serviceId = resource.service['@id'] || '';
-                        serviceAtId = resource.service.id || '';
                     }
                 }
 
@@ -521,7 +521,7 @@
                     label: label,
                     canvasId: canvasId,
                     serviceId: serviceId,
-                    serviceAtId: serviceAtId
+                    ressourceId: ressourceId
                 };
             });
 
@@ -569,7 +569,7 @@
                         }
                     },
                     { 
-                        data: 'serviceAtId',
+                        data: 'ressourceId',
                         render: function(data, type) {
                             if (type !== 'display') {
                                 return data;
@@ -695,8 +695,7 @@
                 if (resource['@id']) {
                     if (resource['@id'].includes('/full/')) {
                         return resource['@id'].replace(/\/full\/.*\//, '/full/100,/');
-                    }
-                    return resource['@id'];
+                    };
                 }
                 if (resource.service && resource.service['@id']) {
                     return `${resource.service['@id']}/full/100,/0/default.jpg`;
@@ -710,9 +709,13 @@
             const images = canvas.images || [];
             if (images.length > 0 && images[0].resource) {
                 const resource = images[0].resource;
-                if (resource['@id']) return resource['@id'];
+                if (resource['@id']) {
+                    if (resource['@id'].includes('/full/')) {
+                        return resource['@id'].replace(/\/full\/.*?\//, '/full/800,/')
+                    };
+                };
                 if (resource.service && resource.service['@id']) {
-                    return `${resource.service['@id']}/full/full/0/default.jpg`;
+                    return `${resource.service['@id']}/full/800,/0/default.jpg`;
                 }
             }
             return null;
