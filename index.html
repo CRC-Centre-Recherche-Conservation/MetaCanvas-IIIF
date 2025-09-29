@@ -375,19 +375,29 @@
                     <i class="fas fa-images mr-2 text-purple-400"></i>Canvas et Services
                 </h3>
                 <div class="overflow-x-auto scrollbar-thin">
-                    <table id="canvasTable" class="display nowrap w-full" style="width:100% !important">
-                        <thead>
-                            <tr>
-                                <th>Aperçu</th>
-                                <th>Label</th>
-                                <th>Canvas ID</th>
-                                <th>Service ID</th>
-                                <th>Ressource ID</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        </tbody>
-                    </table>
+                    <div class="mb-4 flex justify-between items-center"></div>
+                        <button 
+                            id="downloadBtn" 
+                            onclick="downloadSelectedUrls()" 
+                            class="px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg font-semibold hover:from-green-700 hover:to-emerald-700 transition-all duration-300 hover-scale shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled>
+                            <i class="fas fa-download mr-2"></i>Télécharger les URLs sélectionnées (<span id="selectedCount">0</span>)
+                        </button>
+                        <table id="canvasTable" class="display nowrap w-full" style="width:100% !important">
+                            <thead>
+                                <tr>
+                                    <th><input type="checkbox" id="selectAll" class="rounded"></th>
+                                    <th>Aperçu</th>
+                                    <th>Label</th>
+                                    <th>Canvas ID</th>
+                                    <th>Service ID</th>
+                                    <th>Ressource ID</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -543,6 +553,14 @@
                 data: data,
                 columns: [
                     {
+                        data: null,
+                        orderable: false,
+                        width: '40px',
+                        render: function(data, type, row, meta) {
+                            return `<input type="checkbox" class="row-select rounded" data-row-index="${meta.row}">`;
+                        }
+                    },
+                    {
                         data: 'thumbnail',
                         orderable: false,
                         width: '80px',
@@ -609,7 +627,7 @@
                 },
                 dom: '<"flex justify-between items-center mb-4"lf>rtip',
                 drawCallback: function() {
-                    // Réappliquer le highlight après chaque redraw
+                    // Reapply the highlight after each redraw
                     const searchTerm = $('.dataTables_filter input').val();
                     if (searchTerm) {
                         $('#canvasTable tbody .label-text').each(function() {
@@ -622,8 +640,86 @@
                             }
                         });
                     }
+                    attachCheckboxEvents();
                 }
             });
+            $('#selectAll').on('change', function() {
+                const isChecked = this.checked;
+                dataTable.rows().every(function() {
+                    const row = this.node();
+                    $(row).find('.row-select').prop('checked', isChecked);
+                });
+                updateSelectedCount();
+            });
+            
+            attachCheckboxEvents();
+        }
+
+        function attachCheckboxEvents() {
+            $('.row-select').off('change').on('change', function() {
+                updateSelectedCount();
+                updateSelectAllCheckbox();
+            });
+        }
+
+        function updateSelectedCount() {
+            let count = 0;
+            dataTable.rows().every(function() {
+                const row = this.node();
+                if ($(row).find('.row-select').is(':checked')) {
+                    count++;
+                }
+            });
+            $('#selectedCount').text(count);
+            $('#downloadBtn').prop('disabled', count === 0);
+        }
+
+        function updateSelectAllCheckbox() {
+            let total = 0;
+            let checked = 0;
+            dataTable.rows().every(function() {
+                total++;
+                const row = this.node();
+                if ($(row).find('.row-select').is(':checked')) {
+                    checked++;
+                }
+            });
+            $('#selectAll').prop('checked', total > 0 && checked === total);
+        }
+
+        function downloadSelectedUrls() {
+            const selectedRows = [];
+            
+            dataTable.rows().every(function(rowIdx) {
+                const row = this.node();
+                const checkbox = $(row).find('.row-select');
+                
+                if (checkbox.is(':checked')) {
+                    const rowData = this.data();
+                    if (rowData.serviceId) {
+                        selectedRows.push(rowData.serviceId + '/full/full/0/default.jpg');
+                    }
+                }
+            });
+            
+            if (selectedRows.length === 0) {
+                showError('Aucune ligne avec Service ID sélectionnée');
+                return;
+            }
+            
+            // Create text file
+            const textContent = selectedRows.join('\n');
+            const blob = new Blob([textContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            
+            // Create download link
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'iiif_urls.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
 
         function createIdCell(id) {
