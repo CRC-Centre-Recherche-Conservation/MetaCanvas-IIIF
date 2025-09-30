@@ -521,6 +521,8 @@
         });
 
         async function loadManifest() {
+            useApiV3 = $('#apiVersionToggle').prop('checked', false).prop('checked');
+            updateApiVersion()
             const url = document.getElementById('manifestUrl').value.trim();
             if (!url) {
                 showError('Veuillez entrer une URL de manifeste IIIF valide');
