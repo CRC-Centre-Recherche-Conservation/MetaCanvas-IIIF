@@ -521,6 +521,13 @@
         });
 
         async function loadManifest() {
+            // reset var
+            useApiV3 = $('#apiVersionToggle').prop('checked', false).prop('checked');
+            updateApiVersion()
+            document.getElementById('selectAll').checked = false;
+            document.getElementById('selectedCount').textContent = '0';
+            document.getElementById('downloadBtn').disabled = true;
+
             const url = document.getElementById('manifestUrl').value.trim();
             if (!url) {
                 showError('Veuillez entrer une URL de manifeste IIIF valide');
